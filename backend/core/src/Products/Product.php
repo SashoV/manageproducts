@@ -13,7 +13,11 @@ abstract class Product
     public $name;
     public $price;
     public $type;
+    public $type_id;
+    public $rules;
     public $attribute;
+    public $attribute_id;
+    public $attributeString;
 
     public function setId($id)
     {
@@ -65,14 +69,86 @@ abstract class Product
         return $this->type;
     }
 
-    public abstract function save();
+    public function getTypeId()
+    {
+        return $this->type_id;
+    }
 
-    public abstract function setProperties($postData);
+    public function getAttribute()
+    {
+        return $this->attribute;
+    }
 
+    public function setAttribute($attribute)
+    {
+        $this->attribute = $attribute;
+    }
+
+    public function setAttributeString($attributeName, $attributeValue, $attributeUnit)
+    {
+        $this->attributeString = ucfirst($attributeName . ": " . $attributeValue . " " . $attributeUnit);
+    }
+
+    public function getAttributeString()
+    {
+        return $this->attributeString;
+    }
+
+    public function getAttributeId()
+    {
+        return $this->attribute_id;
+    }
+
+    public function setPropertiesFromDb($data)
+    {
+        $this->setId($data['id']);
+        $this->setSku($data['sku']);
+        $this->setName($data['name']);
+        $this->setPrice($data['price']);
+        $this->setType($data['type']);
+        $this->setAttributeString($data['spec_attr_name'], $data['spec_attr_value'], $data['unit']);
+    }
+
+    public function setProperties($postData)
+    {
+        $this->setSku($postData['sku']);
+        $this->setName($postData['name']);
+        $this->setPrice($postData['price']);
+        $this->setType($postData['type']);
+        $this->setAttribute($postData);
+    }
+
+    public function save()
+    {
+        try {
+            $conn = new Connection();
+            $sql = 'INSERT INTO products (sku, name, price, type_id, spec_attr_id, spec_attr_value) VALUES (:sku, :name, :price, :type_id, :spec_attr_id, :spec_attr_value)';
+            $stmt = $conn->prepare($sql);
+
+            $sku = $this->getSku();
+            $name = $this->getName();
+            $price = $this->getPrice();
+            $type_id = $this->getTypeId();
+            $attr_id = $this->getAttributeId();
+            $attr_value = $this->getAttribute();
+
+            $stmt->bindParam(':sku', $sku);
+            $stmt->bindParam(':name', $name);
+            $stmt->bindParam(':price', $price);
+            $stmt->bindParam(':type_id', $type_id);
+            $stmt->bindParam(':spec_attr_id', $attr_id);
+            $stmt->bindParam(':spec_attr_value', $attr_value);
+
+            $success = $stmt->execute();
+            return $success;
+        } catch (\Throwable $th) {
+            //throw $th;
+            return json_encode(['error' => 'Oops, something went wrong. Please try again later.']);
+        }
+    }
 
     public static function getProducts()
     {
-
         try {
             $conn = new Connection();
 
